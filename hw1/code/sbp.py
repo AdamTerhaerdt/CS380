@@ -72,6 +72,10 @@ def apply_move(board, move):
     coords = find_piece_coordinates(board, piece)
     dx, dy = DIRECTIONS[direction]
     new_coords = [(x + dx, y + dy) for x, y in coords]
+    available_moves = get_available_moves(board)
+    if move not in available_moves:
+        print("Error: Invalid move")
+        sys.exit(1)
     # Clear old positions
     for x, y in coords:
         board[y][x] = EMPTY_CELL
@@ -213,13 +217,8 @@ def main():
             filename = sys.argv[2]
             board = load_board(filename)
             move = parse_move(sys.argv[3])
-            available_moves = get_available_moves(board)
-            if move in available_moves:
-                board = apply_move(board, move)
-                print_board(board)
-            else:
-                print("Error: Invalid move")
-                sys.exit(1)
+            board = apply_move(board, move)
+            print_board(board)
         case "compare":
             if len(sys.argv) != 4:
                 print("Error: Two board files required for comparison")
