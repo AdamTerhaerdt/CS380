@@ -20,7 +20,6 @@ def random_walk(board, n):
     moves_made = 0
     while moves_made < n:
         available_moves = get_available_moves(board)
-        print(available_moves)
         if not available_moves:
             print("No moves available!")
             break
@@ -29,8 +28,8 @@ def random_walk(board, n):
         print(f"Move {moves_made + 1}: ({piece}, {direction})")
         apply_move(board, move)
         normalize_board(board)
-        print_board(board)
-        print()
+        #print_board(board)
+        #print()
         if check_solution(board):
             print("Goal reached!")
             break
@@ -92,22 +91,27 @@ def find_piece_coordinates(board, piece):
     for i in range(ROWS):
         row = board[i]
         for j in range(COLS):
-            if row[j] == int(piece):
+            if int(row[j]) == piece:
                 coords.append((j, i))
     return coords
 
 def is_valid_move(board, piece_coords, direction, piece):
     dx, dy = DIRECTIONS[direction]
-    new_coords = get_new_coords(piece_coords, direction)
+    new_coords = [(x + dx, y + dy) for x, y in piece_coords]
+    
     for x, y in new_coords:
         # Check if wall
         if int(board[y][x]) == WALL:
+            #print("NOT ALLOWED WALL")
             return False
+        
         # Check if new position is empty or if piece 2 moving to goal
         if int(board[y][x]) != EMPTY_CELL and int(board[y][x]) != piece:
-            # Allow piece 2 to move onto goal (-1)
-            if not (piece == 2 and int(board[y][x]) == GOAL):
-                return False
+            if piece == 2 and int(board[y][x]) == GOAL:
+                #print("ALLOWED NOT EMPTY TO GOAL")
+                return True
+            #print("NOT ALLOWED NOT EMPTY")
+            return False
     return True
 
 def get_new_coords(piece_coords, direction):
@@ -239,7 +243,7 @@ def main():
             filename = sys.argv[2]
             n_moves = int(sys.argv[3])
             board = load_board(filename)
-            print_board(board)
+            #print_board(board)
             random_walk(board, n_moves)
         case _:
             print(f"Error: Unknown command '{command}'")
