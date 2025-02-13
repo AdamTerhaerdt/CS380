@@ -1,6 +1,8 @@
 import sys
 import random
-
+from queue import Queue
+from stack import Stack
+import time
 #CONSTANTS
 GOAL = -1
 EMPTY_CELL = 0
@@ -86,19 +88,16 @@ def apply_move(board, move):
         
     dx, dy = DIRECTIONS[direction]
     new_coords = [(x + dx, y + dy) for x, y in coords]
-    available_moves = get_available_moves(board)
     
-    if move not in available_moves:
-        print("Error: Invalid move")
-        sys.exit(1)
+    new_board = [row[:] for row in board]
         
-    # Clear old positions
     for x, y in coords:
-        board[y][x] = EMPTY_CELL
-    # Set new positions  
+        new_board[y][x] = str(EMPTY_CELL)
+          
     for x, y in new_coords:
-        board[y][x] = piece
-    return board
+        new_board[y][x] = str(piece)
+        
+    return new_board
 
 def parse_move(move_str):
     # Remove parentheses and split by comma
@@ -194,6 +193,66 @@ def load_board(filename):
         print(f"Error: Could not read file '{filename}'")
         sys.exit(1)
 
+def search(board, data_structure, depth_limit=None):
+    start_time = time.time()
+    nodes_explored = 0
+    current_depth = 1 if depth_limit is not None else None
+    
+    while True:
+        visited = set()
+        data_structure.push([board, []])
+        
+        while not data_structure.is_empty():
+            current_board, current_moves = data_structure.pop()
+            normalize_board(current_board)
+            
+            if check_solution(current_board):
+                end_time = time.time()
+                solution_length = len(current_moves)
+                
+                # Print moves
+                for piece, direction in current_moves:
+                    print(f"({piece},{direction})")
+                print()
+                # Print final board state
+                print_board(current_board)
+                print()
+                # Print metrics (no labels, just numbers)
+                print(nodes_explored)
+                print(f"{(end_time - start_time):.2f}")
+                print(solution_length)
+                return
+                
+            if current_depth and len(current_moves) >= current_depth:
+                continue
+                
+            board_tuple = tuple(tuple(int(cell) for cell in row) for row in current_board)
+            if board_tuple in visited:
+                continue
+            visited.add(board_tuple)
+            nodes_explored += 1 
+                
+            available_moves = get_available_moves(current_board)
+            for move in available_moves:
+                new_board = [row[:] for row in current_board]
+                new_board = apply_move(new_board, move)
+                data_structure.push([new_board, current_moves + [move]])
+        
+        if current_depth is None:
+            end_time = time.time()
+            print(nodes_explored)
+            print(f"{(end_time - start_time):.2f}")
+            print("No solution found")
+            return
+            
+        current_depth += 1
+        if current_depth > 1000:
+            end_time = time.time()
+            print(nodes_explored)
+            print(f"{(end_time - start_time):.2f}")
+            print("No solution found")
+            return
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 sbp.py <command> [<optional-argument>]")
@@ -260,6 +319,27 @@ def main():
             board = load_board(filename)
             #print_board(board)
             random_walk(board, n_moves)
+        case "bfs":
+            if len(sys.argv) != 3:
+                print("Error: Board file required for bfs command")
+                sys.exit(1)
+            filename = sys.argv[2]  
+            board = load_board(filename)
+            search(board, Queue())
+        case "dfs":
+            if len(sys.argv) != 3:
+                print("Error: Board file required for dfs command")
+                sys.exit(1)
+            filename = sys.argv[2]
+            board = load_board(filename)
+            search(board, Stack())
+        case "ids":
+            if len(sys.argv) != 3:
+                print("Error: Board file required for ids command")
+                sys.exit(1)
+            filename = sys.argv[2]
+            board = load_board(filename)
+            search(board, Stack(), 1)
         case _:
             print(f"Error: Unknown command '{command}'")
             sys.exit(1)
