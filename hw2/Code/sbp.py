@@ -2,7 +2,9 @@ import sys
 import random
 from queue import Queue
 from stack import Stack
+from priority_queue import PriorityQueue
 import time
+
 #CONSTANTS
 GOAL = -1
 EMPTY_CELL = 0
@@ -118,18 +120,28 @@ def is_valid_move(board, piece_coords, direction, piece):
     dx, dy = DIRECTIONS[direction]
     new_coords = [(x + dx, y + dy) for x, y in piece_coords]
     
+    # First, get the set of current piece coordinates to ignore them
+    current_piece_coords = set((x, y) for x, y in piece_coords)
+    
+    # Check if any new coordinates are out of bounds
     for x, y in new_coords:
-        # Check if wall
+        if x < 0 or x >= COLS or y < 0 or y >= ROWS:
+            return False
+            
+        # Skip if this coordinate is part of the current piece
+        if (x, y) in current_piece_coords:
+            continue
+            
+        # Check if wall - no piece should ever move into a wall
         if int(board[y][x]) == WALL:
-            #print("NOT ALLOWED WALL")
             return False
         
         # Check if new position is empty or if piece 2 moving to goal
-        if int(board[y][x]) != EMPTY_CELL and int(board[y][x]) != piece:
-            if piece == 2 and int(board[y][x]) == GOAL:
-                #print("ALLOWED NOT EMPTY TO GOAL")
-                return True
-            #print("NOT ALLOWED NOT EMPTY")
+        cell_value = int(board[y][x])
+        if cell_value != EMPTY_CELL:
+            # Only allow piece 2 to move into goal, and ALL cells must be valid
+            if piece == 2 and cell_value == GOAL:
+                continue  # Check other cells
             return False
     return True
 
@@ -148,16 +160,19 @@ def get_specific_piece_moves(board, piece):
 
 def get_available_moves(board):
     moves = []
-    #Set to get unique pieces
-    pieces = set()
-    for row in board:
-        for cell in row:
-            if int(cell) != EMPTY_CELL and int(cell) != WALL and int(cell) != GOAL:
-                pieces.add(int(cell))
-    # Get moves for each piece
+    pieces = sorted(set(int(cell) for row in board 
+                   for cell in row 
+                   if int(cell) != EMPTY_CELL and int(cell) != WALL and int(cell) != GOAL), 
+               reverse=True)  # Process larger piece numbers first
+
     for piece in pieces:
-        piece_moves = get_specific_piece_moves(board, piece)
+        piece_moves = []
+        for direction in ["UP", "DOWN", "LEFT", "RIGHT"]:
+            coords = find_piece_coordinates(board, piece)
+            if is_valid_move(board, coords, direction, piece):
+                piece_moves.append((piece, direction))
         moves.extend(piece_moves)
+    
     return moves
 
 def check_solution(board):
@@ -192,51 +207,105 @@ def load_board(filename):
     except IOError:
         print(f"Error: Could not read file '{filename}'")
         sys.exit(1)
+        
+def calculate_heuristic(board):
+    goal_position = None
+    for i in range(ROWS):
+        for j in range(COLS):
+            if int(board[i][j]) == GOAL:
+                goal_position = (j, i)
+                break
+        if goal_position:
+            break
+    
+    if not goal_position:
+        return 0 
+    
+    piece_coords = find_piece_coordinates(board, 2)
+    if not piece_coords:
+        print("Error: No piece 2 found")
+        sys.exit(1)
+    
+    min_distance = float('inf')
+    for coord in piece_coords:
+        distance = calculate_manhattan_distance(
+            coord[0], coord[1],
+            goal_position[0], goal_position[1]
+        )
+        #print("DISTANCE: " + str(distance))
+        min_distance = min(min_distance, distance)
+    
+    return min_distance
+
+def calculate_manhattan_distance(x1, y1, x2, y2):
+    return abs(x1 - x2) + abs(y1 - y2)
 
 def search(board, data_structure, depth_limit=None):
     start_time = time.time()
-    nodes_explored = 0
+    nodes_explored = 1
+    board = normalize_board(board)
+    inital = calculate_heuristic(board)
     current_depth = 1 if depth_limit is not None else None
-    
+
     while True:
+        if depth_limit is not None:
+            data_structure = Stack()
+        data_structure.push([board, []], inital)
         visited = set()
-        data_structure.push([board, []])
-        
         while not data_structure.is_empty():
-            current_board, current_moves = data_structure.pop()
-            normalize_board(current_board)
+            result = data_structure.pop()
+            if isinstance(result, tuple) and len(result) == 2:
+                current_board = result[0][0]
+                current_moves = result[0][1]
+                priority = result[1]
+            else:
+                current_board, current_moves = result
+                priority = None
+            #print(f"Current board: {current_board}")
+            #print(f"Current moves: {current_moves}")
+            current_depth_of_node = len(current_moves)
             
             if check_solution(current_board):
+                #print("\nSOLUTION FOUND!")
                 end_time = time.time()
                 solution_length = len(current_moves)
-                
-                # Print moves
                 for piece, direction in current_moves:
                     print(f"({piece},{direction})")
                 print()
-                # Print final board state
                 print_board(current_board)
                 print()
-                # Print metrics (no labels, just numbers)
                 print(nodes_explored)
                 print(f"{(end_time - start_time):.2f}")
                 print(solution_length)
                 return
-                
-            if current_depth and len(current_moves) >= current_depth:
+
+            if depth_limit is not None and len(current_moves) >= current_depth:
+                #print(f"Skipping - reached depth limit {current_depth}")
                 continue
-                
+
             board_tuple = tuple(tuple(int(cell) for cell in row) for row in current_board)
             if board_tuple in visited:
+                #print("Skipping - already visited")
                 continue
-            visited.add(board_tuple)
-            nodes_explored += 1 
                 
-            available_moves = get_available_moves(current_board)
-            for move in available_moves:
-                new_board = [row[:] for row in current_board]
-                new_board = apply_move(new_board, move)
-                data_structure.push([new_board, current_moves + [move]])
+            visited.add(board_tuple)
+            if depth_limit is None or len(current_moves) + 1 == current_depth:
+                nodes_explored += 1
+            
+            if depth_limit is None or len(current_moves) < current_depth:
+                available_moves = get_available_moves(current_board)
+                #print(f"Available moves: {available_moves}")
+                for move in available_moves:
+                    new_board = [row[:] for row in current_board]
+                    new_board = apply_move(new_board, move)
+                    new_board = normalize_board(new_board)
+                    if priority is not None:
+                        new_priority = priority + 1
+                        new_h_cost = calculate_heuristic(new_board)
+                        new_f_cost = new_priority + new_h_cost
+                    else:
+                        new_f_cost = None
+                    data_structure.push([new_board, current_moves + [move]], new_f_cost)
         
         if current_depth is None:
             end_time = time.time()
@@ -340,6 +409,13 @@ def main():
             filename = sys.argv[2]
             board = load_board(filename)
             search(board, Stack(), 1)
+        case "astar":
+            if len(sys.argv) != 3:
+                print("Error: Board file required for astar command")
+                sys.exit(1)
+            filename = sys.argv[2]
+            board = load_board(filename)
+            search(board, PriorityQueue())
         case _:
             print(f"Error: Unknown command '{command}'")
             sys.exit(1)
