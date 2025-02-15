@@ -242,7 +242,7 @@ def calculate_manhattan_distance(x1, y1, x2, y2):
 
 def search(board, data_structure, depth_limit=None):
     start_time = time.time()
-    nodes_explored = 1
+    nodes_explored = 0
     board = normalize_board(board)
     inital = calculate_heuristic(board)
     current_depth = 1 if depth_limit is not None else None
