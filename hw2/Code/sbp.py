@@ -248,8 +248,6 @@ def search(board, data_structure, depth_limit=None):
     current_depth = 1 if depth_limit is not None else None
 
     while True:
-        if depth_limit is not None:
-            data_structure = Stack()
         data_structure.push([board, []], inital)
         visited = set()
         while not data_structure.is_empty():
@@ -301,11 +299,11 @@ def search(board, data_structure, depth_limit=None):
                     new_board = normalize_board(new_board)
                     if priority is not None:
                         new_priority = priority + 1
-                        new_h_cost = calculate_heuristic(new_board)
-                        new_f_cost = new_priority + new_h_cost
+                        new_h = calculate_heuristic(new_board)
+                        new_f = new_priority + new_h
                     else:
-                        new_f_cost = None
-                    data_structure.push([new_board, current_moves + [move]], new_f_cost)
+                        new_f = None
+                    data_structure.push([new_board, current_moves + [move]], new_f)
         
         if current_depth is None:
             end_time = time.time()
