@@ -262,7 +262,7 @@ def search(board, data_structure, depth_limit=None):
             #print(f"Current board: {current_board}")
             #print(f"Current moves: {current_moves}")
             current_depth_of_node = len(current_moves)
-            
+                
             if check_solution(current_board):
                 #print("\nSOLUTION FOUND!")
                 end_time = time.time()
@@ -290,22 +290,22 @@ def search(board, data_structure, depth_limit=None):
             if depth_limit is None or len(current_moves) + 1 == current_depth:
                 nodes_explored += 1
             
-            if depth_limit is None or len(current_moves) < current_depth:
-                available_moves = get_available_moves(current_board)
-                #print(f"Available moves: {available_moves}")
-                for move in available_moves:
-                    new_board = [row[:] for row in current_board]
-                    new_board = apply_move(new_board, move)
-                    new_board = normalize_board(new_board)
-                    if priority is not None:
-                        new_priority = priority + 1
-                        new_h = calculate_heuristic(new_board)
-                        new_f = new_priority + new_h
-                    else:
-                        new_f = None
-                    data_structure.push([new_board, current_moves + [move]], new_f)
+            available_moves = get_available_moves(current_board)
+            if data_structure == Stack:
+                available_moves.reverse()
+            for move in available_moves:
+                new_board = [row[:] for row in current_board]
+                new_board = apply_move(new_board, move)
+                new_board = normalize_board(new_board)
+                if priority is not None:
+                    new_priority = priority + 1
+                    new_h = calculate_heuristic(new_board)
+                    new_f = new_priority + new_h
+                else:
+                    new_f = None
+                data_structure.push([new_board, current_moves + [move]], new_f)
         
-        if current_depth is None:
+        if depth_limit is None:
             end_time = time.time()
             print(nodes_explored)
             print(f"{(end_time - start_time):.2f}")
