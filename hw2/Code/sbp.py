@@ -102,7 +102,6 @@ def apply_move(board, move):
     return new_board
 
 def parse_move(move_str):
-    # Remove parentheses and split by comma
     move_str = move_str.strip('()')
     piece, direction = move_str.split(',')
     return (int(piece), direction.strip().upper()) 
@@ -120,28 +119,22 @@ def is_valid_move(board, piece_coords, direction, piece):
     dx, dy = DIRECTIONS[direction]
     new_coords = [(x + dx, y + dy) for x, y in piece_coords]
     
-    # First, get the set of current piece coordinates to ignore them
     current_piece_coords = set((x, y) for x, y in piece_coords)
     
-    # Check if any new coordinates are out of bounds
     for x, y in new_coords:
         if x < 0 or x >= COLS or y < 0 or y >= ROWS:
             return False
             
-        # Skip if this coordinate is part of the current piece
         if (x, y) in current_piece_coords:
             continue
             
-        # Check if wall - no piece should ever move into a wall
         if int(board[y][x]) == WALL:
             return False
         
-        # Check if new position is empty or if piece 2 moving to goal
         cell_value = int(board[y][x])
         if cell_value != EMPTY_CELL:
-            # Only allow piece 2 to move into goal, and ALL cells must be valid
             if piece == 2 and cell_value == GOAL:
-                continue  # Check other cells
+                continue
             return False
     return True
 
@@ -163,7 +156,7 @@ def get_available_moves(board):
     pieces = sorted(set(int(cell) for row in board 
                    for cell in row 
                    if int(cell) != EMPTY_CELL and int(cell) != WALL and int(cell) != GOAL), 
-               reverse=True)  # Process larger piece numbers first
+               reverse=True)
 
     for piece in pieces:
         piece_moves = []
