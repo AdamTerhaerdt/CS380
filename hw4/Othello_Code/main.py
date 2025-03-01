@@ -2,6 +2,7 @@ import agent
 import othello
 import game
 import sys
+import avt38
 
 def create_player(arg,  depht_or_time):
     if arg == 'human':
@@ -13,7 +14,7 @@ def create_player(arg,  depht_or_time):
     elif arg == 'alphabeta':
         return agent.AlphaBeta(depht_or_time)
     elif arg == 'extra':
-        return agent.extra(depht_or_time)
+        return avt38.extra(depht_or_time)
     else:
         agent.RandomAgent()
 
