@@ -155,12 +155,12 @@ def get_available_moves(board):
     moves = []
     pieces = sorted(set(int(cell) for row in board 
                    for cell in row 
-                   if int(cell) != EMPTY_CELL and int(cell) != WALL and int(cell) != GOAL), 
-               reverse=True)
+                   if int(cell) != EMPTY_CELL and int(cell) != WALL and int(cell) != GOAL))
 
     for piece in pieces:
         piece_moves = []
-        for direction in ["UP", "DOWN", "LEFT", "RIGHT"]:
+        directions = ["UP", "RIGHT", "DOWN", "LEFT"]
+        for direction in directions:
             coords = find_piece_coordinates(board, piece)
             if is_valid_move(board, coords, direction, piece):
                 piece_moves.append((piece, direction))
@@ -284,8 +284,6 @@ def search(board, data_structure, depth_limit=None):
                 nodes_explored += 1
             
             available_moves = get_available_moves(current_board)
-            if data_structure == Stack:
-                available_moves.reverse()
             for move in available_moves:
                 new_board = [row[:] for row in current_board]
                 new_board = apply_move(new_board, move)
